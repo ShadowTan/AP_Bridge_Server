@@ -1,0 +1,50 @@
+POST https://example.com/comments/1 HTTP/1.1
+
+###
+
+GET https://example.com/topics/1 HTTP/1.1
+
+
+###
+#Game info
+GET http://localhost:3000/game HTTP/1.1
+content-type: application/json
+
+{
+    "type": "info",
+    "game_id": "abc"
+}
+
+###
+
+#Start game post request
+POST http://localhost:3000/game HTTP/1.1
+content-type: application/json
+
+{
+    "type": "new_game",
+    "test_mode": "true"
+}
+
+###
+
+POST http://localhost:3000/game HTTP/1.1
+content-type: application/json
+
+{
+    "type": "ready",
+    "game_id": "abc"
+}
+
+
+
+###
+POST http://localhost:3000/game HTTP/1.1
+content-type: application/json
+
+{
+    "type": "bid",
+    "game_id": "abc",
+    "player": "west",
+    "bid": "skip"
+}

@@ -13,12 +13,17 @@ export interface Player{
 
 
 export class functions{
-    static SuitOrder = ["nc", "spades", "hearts", "diamonds", "clubs"]
+    public static validBidLetters: string[] = ["c", "d", "h", "s", "nc"]
+    public static bidLetterWorth: {[key: string]: number} = {"c": 0, "d": 1, "h": 2, "s": 3, "nc": 4} 
     
     constructor(){
         //Empty
     }
 
+    /**
+     * Creates a standard 52 card deck
+     * @returns string array with cards
+     */
     static async createDeck(): Promise <string[]>{
         /** 
         * @returns a list with a standard deck of cards
@@ -37,14 +42,12 @@ export class functions{
         return deck;
     }
 
-
+    /**
+     * Shuffles the unshuffled deck using Fisher-Yates algorithm
+     * @param unshuffledDeck - The unshuffled deck of cards
+     * @returns The shuffled deck of cards
+     */
     static async shuffleDeck(Deck: string[]): Promise <string[]>{
-        /**
-         * Shuffles the unshuffled deck using Fisher-Yates algorithm
-         * @param unshuffledDeck - The unshuffled deck of cards
-         * @returns The shuffled deck of cards
-         */
-        
         for (let i = Deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [Deck[i], Deck[j]] = [Deck[j], Deck[i]];
@@ -53,6 +56,80 @@ export class functions{
         return Deck;
     }
 
+    /**
+     * a hand calculator for bridge hand
+     * @param hand string[] | your cards
+     * @returns number | your hand worth
+     */
+    static async calculateHandValue(hand: string[]): Promise <number>{
+        /*
+        Med 16-18 poeng og en jevn hånd, skal spilleren åpne med 1NT
+
+        Based on
+        HCP (High card points):
+            ace = 4, king = 3, queen = 2, Jack = 1 
+        Distribution Points 
+            0: 3, 1: 2, 2: 1
+        */
+        let handValue = 0;
+
+        let suitDict: {[key: string]: number} = {}
+        // let rankDict: {[key: string]: number} = {}
+        for (let i: number = hand.length; i > 0; i--) {
+            const card = hand[i];
+            if (card) {
+                const parts: string[] = card.split("_");
+                suitDict[parts[0]] = (suitDict[parts[0]] || 0) + 1;
+
+                //HCP
+                switch(parts[1]){
+                    case "Ace": {
+                        handValue += 4
+                        break;
+                    }
+                    case "King": {
+                        handValue += 3
+                        break;
+                    }
+                    case "Queen": {
+                        handValue += 2
+                        break;
+                    }
+                    case "Jack": {
+                        handValue += 1
+                        break;
+                    }
+                    
+                }
+                // rankDict[parts[1]] = (rankDict[parts[1]] || 0) + 1;
+            }
+        }
+
+        //Distribution Points 
+        for (let key in suitDict) {
+            let value = suitDict[key]
+
+            switch(value){
+                case 0: {
+                    handValue += 3
+                }
+                case 1: {
+                    handValue += 2
+                }
+                case 2: {
+                    handValue += 1
+                }
+                
+            }
+        }
+        console.log(handValue)
+        return handValue
+    }
+
+    /**
+     * @param testMode whether game is in testMode
+     * @returns a string with a unique player id
+     */
     static async generatePlayerID(testMode: boolean = false): Promise <string>{
         if (testMode){
             return "abc"
@@ -61,31 +138,57 @@ export class functions{
         }
     }
 
-    static async validBet(old_bet: string, bet: string): Promise <boolean>{
-        /**
-         * @param old_bet The current valid bet
-         * @param bet New proposed bet
-         * @returns boolean whether bet is legal
-         */
+    /**
+     * @param oldBid the current highest bid
+     * @param bid the new bid
+     * @returns a string (empty if bid is valid) else it returns a reason why the bid is invalid)
+     */
+    static async ValidBid(oldBid: string, bid: string): Promise <string> {
+        
+        //if skip
+        if (bid === "skip"){
+            return "skip";
+        }
+        
+        //defining variables for new bid and current bid
+        const bidNumber: number = parseInt(bid.slice(0))
+        const bidLetters: string = bid.slice(1, bid.length)
 
-        const existingBetAmount = old_bet.slice(0,1)
-        const existingBetSuit = old_bet.slice(1).toLowerCase()
-        const newBetAmount = bet.slice(0,1);
-        const newBetSuit = bet.slice(1).toLowerCase();
-   
-        console.log("BetSuit", functions.SuitOrder.indexOf(existingBetSuit), ">", functions.SuitOrder.indexOf(newBetSuit),
-            functions.SuitOrder.indexOf(existingBetSuit) > functions.SuitOrder.indexOf(newBetSuit))
-        console.log("BetRank", newBetAmount, ">", existingBetAmount,
-            newBetAmount > existingBetAmount)
-        if(newBetAmount > existingBetAmount && functions.SuitOrder.indexOf(existingBetSuit) > functions.SuitOrder.indexOf(newBetSuit))
-            {
-            return false
+        const curNumber: number = parseInt((oldBid).substring(0));
+        const curLetters: string = (oldBid).slice(1, (oldBid).length)
+        console.log(bidNumber+ ", " + bidLetters)
+        
+
+        //if bid is NaN
+        if(isNaN(bidNumber)){
+            return "missing number"
         }
 
-        return true
+        // You can't ever bid higher than 7
+        if (bidNumber > 7){
+            return "can't bid higher than 7"
+        }
 
+        //Bid letters aren't valid
+        if (!functions.validBidLetters.includes(bidLetters.toLowerCase())){
+            return "bid letter is not valid";
+        }
+
+        //checks that bid amount and or letter has increased
+        if(functions.bidLetterWorth[bidLetters] <= functions.bidLetterWorth[curLetters] && bidNumber <= curNumber){
+            if(functions.bidLetterWorth[bidLetters] <= functions.bidLetterWorth[curLetters] && bidNumber <= curNumber){
+                return "bid letter and bid number are less than current"
+            } else if (functions.bidLetterWorth[bidLetters] <= functions.bidLetterWorth[curLetters]) {
+                return "bid letter is less than current"
+            } else {
+                return "bid number is less than current"
+            }
+        }
+        
+        return "";
     }
 }
+
 
 class Bot{
     hand: string[];
@@ -94,6 +197,11 @@ class Bot{
         this.hand = [];
     }
 
+    /**
+     * 
+     * @param deck string[] | a hand of cards
+     * @returns string successful/failed
+     */
     public async setDeck(deck: string[]):Promise <string>{
         /**
          * @param deck receives a hand of cards, and assigns them to the Bot
@@ -102,14 +210,16 @@ class Bot{
             this.hand = deck;
         } catch (error){
             console.log(error)
+            return "failed"
         }
         return "successful"
     }
 
+    /**
+     * 
+     * @returns bot's hand
+     */
     public async getHand(): Promise<string[]>{
-        /**
-         * @returns current deck
-         */
 
         return this.hand;
     }
@@ -121,8 +231,14 @@ export class game{
     id: string;
     testMode: boolean;
     deck: string[];
-    bet: string;
+    
+    //Bidding
+    bid: string;
+    bidding_active: boolean;
+    bidskips: number;
+    trump_suit: string;
 
+    //Player Handling
     playerDict: {[key: string]: any};
     playerList: string[];
     currentPlayerNumber: number;
@@ -132,27 +248,24 @@ export class game{
     constructor(player: Player, testMode: boolean = false){
         this.id = player.id;
         this.deck = [];
-        this.bet = "";
+
+        this.bidding_active = true;
+        this.bid = "";
+        this.bidskips = 0;
+        this.trump_suit = "nc";
 
         this.testMode = testMode;
 
         this.playerList = ["north", "west", "south", "east"];
-        this.currentPlayerNumber = Math.round(Math.random() * 4);
         this.playerDict = {
             "north": player, 
             "west": new Bot(), 
             "south": new Bot(), 
             "east": new Bot()
         }
+
+        this.currentPlayerNumber = Math.round(Math.random() * 4);
         this.currentPlayer = this.playerDict[this.playerList[this.currentPlayerNumber]];
-
-        if (this.testMode){
-            //TODO make it so player 1 can control all players
-        }
-        else {
-            //TODO create 3 other players (bots) 
-
-        }
     }
 
     private async nextPlayer(): Promise <string> {
@@ -162,17 +275,41 @@ export class game{
         return cur
     }
 
+    /**
+     * Only works if testMode is active
+     * @returns every player's hand
+     */
     public async info(): Promise <JSON>{
-        const message: any = {
-            "north_deck": this.playerDict["north"].hand,
-            "south_deck": await this.playerDict["south"].getHand(),
-            "west_deck": await this.playerDict["west"].getHand(),
-            "east_deck": await this.playerDict["east"].getHand(),
-        };
+        if(!this.testMode){
+            const message: any = {
+                "error": "You're not allowed to see info in a non-test game"
+            }
+            return message
+        }
 
+        let message: any = {
+            "id": this.id,
+            "bid": this.bid,
+        }
+        if(this.playerDict["north"].hand){
+            message["decks"] = {
+                "north_deck": this.playerDict["north"].hand,
+                "south_deck": await this.playerDict["south"].getHand(),
+                "west_deck": await this.playerDict["west"].getHand(),
+                "east_deck": await this.playerDict["east"].getHand(),
+            } 
+        } else {
+            message["decks"] = {  
+                "error": "No hands have been dealt yet"
+            } 
+        }
         return message
     }
 
+    /**
+     * Function to start dealing out hands after all players are ready (currently only for 1 player)
+     * @returns Promise <JSON> with player info
+     */
     public async ready(): Promise<JSON>{
         console.log("All players ready, dealing cards");
         let deck = await functions.createDeck();
@@ -183,62 +320,98 @@ export class game{
         this.playerDict["west"].setDeck(deck.slice(26, 39));
         this.playerDict["east"].setDeck(deck.slice(39, 52));
 
-        console.log(this.playerDict["north"].id);
-        console.log(await this.info());
-
         const response: any = {
             "playerHand": this.playerDict["north"].hand,
+            "handValue": await functions.calculateHandValue(this.playerDict["north"].hand),
             "turn": this.playerList[this.currentPlayerNumber],
         }
         return response;
     }
 
 
-    public async doBet(bet: string, player: string = "north"): Promise <JSON>{
-        if(!this.bet && this.playerList[this.currentPlayerNumber] === player){
-            this.bet = bet;
-            this.nextPlayer();
-                    
+    /**
+     * Bidding functionality
+     * @param bet new bet
+     * @param player current player, automatically north
+     * @returns json with information
+     */
+    public async do_bidding(bid: string, player: string = "north"): Promise <JSON>{
+        if(!this.bidding_active){
             const response: any = {
-                "type": "bet",
-                "current_bet": this.bet,
-                "turn": this.playerList[this.currentPlayerNumber]
+                "type": "bidding is inactive",
+                "playing_bid": this.bid,
             }
             return response
         }
         
+        if(!(this.playerList[this.currentPlayerNumber] === player)){
+            const response: any = {
+                "type": "wrong_player",
+                "text": `entered ${player} but it's ${this.playerList[this.currentPlayerNumber]} turn`,
+                "current_bid": this.bid,
+            }
+            return response
+        }
+        const bid_text: string = await functions.ValidBid(this.bid, bid);
         if(this.testMode){
-            if (this.playerList[this.currentPlayerNumber] === player){
-                if(await functions.validBet(this.bet, bet)){
-                    this.bet = bet;
+                if(bid_text === "skip"){
+                    this.bidskips += 1
+                    this.nextPlayer()
+                    if(this.bidskips === 3){
+                        this.bidding_active = false;
+                        //TODO add Dummy logic
+                        //TODO set trump suit
+                        //TODO person to the left of winning bid starts
+                        //TODO if 4 people skip, with no bid, redeal the cards
+
+                        const response: any = {
+                            "type": "bidding_won",
+                            "winning_bid": this.bid,
+                            "turn": this.playerList[this.currentPlayerNumber]
+                        }
+                        return response
+                    }
+
+                    const response: any = {
+                        "type": "player_skip",
+                        "description": `${player} has skipped`,
+                        "turn": this.playerList[this.currentPlayerNumber]
+                    }
+                    return response;
+                }
+
+                if(bid_text){
+                    const response: any = {
+                        "type": "failed_bid",
+                        "description": bid_text,
+                        "current_bid": this.bid,
+                        "turn": this.playerList[this.currentPlayerNumber]
+                    }
+                    return response
+
+                }
+                else{
+                    this.bid = bid;
+                    this.bidskips = 0;
                     this.nextPlayer();
                     
                     const response: any = {
-                        "type": "bet",
-                        "current_bet": this.bet,
+                        "type": "bet_success",
+                        "current_bid": this.bid,
                         "turn": this.playerList[this.currentPlayerNumber]
                     }
                     return response
                 }
-                else{
-                    const response: any = {
-                        "type": "failed_bet",
-                        "current_bet": this.bet,
-                        "turn": this.playerList[this.currentPlayerNumber]
-                    }
-                    return response
-
-                }
-            } else {
-                if(await functions.validBet(this.bet, bet)){
-                     //botBetting(); #TODO 
-                }
-            }
-        }
+            } 
+            // else {
+            //     if(await functions.isValidBid(this.bet, bet)){
+            //          //botBetting(); #TODO 
+            //     }
+            // }
 
         const response: any = {
-            "type": "failed_bet",
-            "current_bet": this.bet,
+            "type": "failed_bid",
+            "current_bid": this.bid,
             "turn": this.playerList[this.currentPlayerNumber]
         }
         return response

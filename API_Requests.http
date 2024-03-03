@@ -45,6 +45,11 @@ content-type: application/json
 {
     "type": "bid",
     "game_id": "abc",
-    "player": "west",
-    "bid": "skip"
+    "player": "north",
+    "bid": "7nt" 
+    
 }
+
+#//change to current player
+//change to new bid, for example: suits: c, d, h, s, nt with number before
+#// example: 1nc, 2s are both valid bids, s2 is not. 

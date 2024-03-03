@@ -3,9 +3,8 @@
 
 PS. Currently has no ERROR handling, so avoid from, example: asking for info about a game that does not exist
 
-<p color="red">
 DOES NOT WORK WITHOUT TESTMODE
-</p>
+
 
 
 ### info

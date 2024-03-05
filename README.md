@@ -8,7 +8,7 @@ DOES NOT WORK WITHOUT TESTMODE
 
 
 ### info
-start with "npm init" to install all packages, then "npm run dev"
+start with "npm istall" to install all packages, then "npm run dev"
 
 All valid API calls are in the API_Requests.http file
 
